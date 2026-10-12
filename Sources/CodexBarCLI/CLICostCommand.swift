@@ -474,6 +474,9 @@ extension CodexBarCLI {
     private static func renderProjectCostText(header: String, snapshot: CostUsageTokenSnapshot) -> String {
         let historyLabel = snapshot.periodLabel
         var lines = [header, "Projects (\(historyLabel)):"]
+        if !snapshot.historyIsFullyScanned {
+            lines.append("Partial local history · recorded token subtotal")
+        }
         guard !snapshot.projects.isEmpty else {
             lines.append("—")
             lines.append(Self.costEstimateHint(provider: .codex))
