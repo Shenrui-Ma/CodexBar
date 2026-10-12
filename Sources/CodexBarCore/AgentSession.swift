@@ -284,20 +284,23 @@ public enum AgentPSOutputParser {
     }
 
     public static func agentProcesses(from records: [AgentProcessRecord]) -> [AgentProcessRecord] {
+        // Prefer argv[0] for bundle checks; prompts may contain app paths. Keep the full command fallback
+        // because an unquoted executable path can contain spaces, such as "Codex Computer Use.app".
         let candidates = records.filter { record in
             let basename = record.executableBasename.lowercased()
             if self.piDialect(for: record) != nil {
                 return !self.isObviousPiFamilyHelper(record.command)
             }
+            let executable = record.arguments?.first ?? record.command
             if basename == AgentSession.Provider.codex.rawValue {
                 let arguments = self.arguments(record)
-                return self.isCodexAgentExecutable(record.command) &&
+                return self.isCodexAgentExecutable(executable) &&
                     !arguments.contains("app-server") &&
                     !arguments.contains("--help") &&
                     !arguments.contains("--version")
             }
             if basename == AgentSession.Provider.claude.rawValue {
-                return self.isClaudeAgentExecutable(record.command) && !self.isObviousClaudeHelper(record.command)
+                return self.isClaudeAgentExecutable(executable) && !self.isObviousClaudeHelper(record.command)
             }
             return basename == "disclaimer" && record.command.contains(AgentSession.Provider.claude.rawValue)
         }
@@ -365,7 +368,7 @@ public enum AgentPSOutputParser {
     public static func hasCodexAppServer(in records: [AgentProcessRecord]) -> Bool {
         records.contains { record in
             record.executableBasename.lowercased() == AgentSession.Provider.codex.rawValue &&
-                self.isCodexAgentExecutable(record.command) &&
+                self.isCodexAgentExecutable(record.arguments?.first ?? record.command) &&
                 self.arguments(record).contains("app-server")
         }
     }
